@@ -1,9 +1,15 @@
-import { Text, View } from 'react-native';
+import { SafeAreaView } from "react-native-safe-area-context";
 
-export default function HomeScreen() {
+import Dashboard from "../components/Dashboard.jsx";
+import Header from "../components/Header.jsx";
+
+export default function App() {
   return (
-    <View className="flex-1 items-center justify-center bg-blue-400">
-      <Text className="text-2xl font-bold text-black">Hello World</Text>
-    </View>
+    <SafeAreaView className="flex-1 bg-black">
+
+      <Header />
+      <Dashboard />
+    </SafeAreaView>
+    
   );
 }
