@@ -1,15 +1,34 @@
+import { useState } from "react";
+import { View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import Dashboard from "../components/Dashboard.jsx";
 import Header from "../components/Header.jsx";
+import NavBar from "../components/NavBar.jsx";
+
+import Dashboard from "../screens/Dashboard.jsx";
+import Ledger from "../screens/Ledger.jsx";
+import Scanner from "../screens/Scanner.jsx";
+
+const screens = {
+  expenses: Dashboard,
+  ledger: Ledger,
+  scanner: Scanner,
+};
 
 export default function App() {
-  return (
-    <SafeAreaView className="flex-1 bg-black">
+  const [tab, setTab] = useState("expenses");
+  const Screen = screens[tab];
 
-      <Header />
-      <Dashboard />
+  return (
+    <SafeAreaView 
+    className="flex-1 bg-black">
+      <Header transparent={tab === "scanner"} />
+
+      <View className="flex-1">
+        <Screen onClose={() => setTab("expenses")} />
+      </View>
+
+      <NavBar active={tab} onChange={setTab} />
     </SafeAreaView>
-    
   );
 }

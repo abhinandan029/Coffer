@@ -33,6 +33,10 @@
           "imageWidth": 76
         }
       ],
+      [
+        "expo-camera",
+        { "cameraPermission" : "Allow Coffer to use the camera to scan QR code."}
+      ],
       "@react-native-vector-icons/ionicons"
     ],
     "experiments": {
