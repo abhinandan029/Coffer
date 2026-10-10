@@ -2,16 +2,20 @@ import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { useState } from "react";
 import { Modal, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 
+import ExpenseSheet from "../components/ExpenseSheet";
+import { useExpenses } from "../contexts/ExpensesContext";
+
 import CalendarFilter from "../components/CalendarFilter";
 import {
   CATEGORIES,
-  DUMMY_EXPENSES,
   PAY_APPS,
   STATUS,
-  UNCATEGORIZED,
+  UNCATEGORIZED
 } from "../constants/expenses";
 import useBudget from "../hooks/useBudget";
+
 import { dayKey, dayLabel, isThisMonth, money, rangeLabel } from "../utils/format";
+
 
 // One entry per calendar day, in the order the (already sorted) list arrives
 function groupByDay(list) {
@@ -42,13 +46,16 @@ export default function Expenses() {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
 
-  // Step 2 will replace this with the on-device store
-  const expenses = DUMMY_EXPENSES;
+ const { expenses, loaded, updateExpense, deleteExpense } = useExpenses();
+  const [selectedId, setSelectedId] = useState(null);
 
   const openEditor = () => {
     setDraft(String(budget));
     setEditing(true);
   };
+
+  if (!loaded) return null;
+  const selectedExpense = expenses.find((e) => e?.id === selectedId) ?? null;
 
   const saveBudget = () => {
     const n = parseInt(draft.replace(/[^0-9]/g, ""), 10);
@@ -73,7 +80,10 @@ export default function Expenses() {
   const hasRange = !!range.start;
 
   return (
-    <ScrollView contentContainerClassName="p-4 pb-32 gap-5">
+    <ScrollView 
+    contentContainerClassName="p-4 pb-32 gap-5"
+    keyboardShouldPersistTaps="handled">
+      
       {/* Budget editor */}
       <Modal visible={editing} transparent animationType="fade" onRequestClose={() => setEditing(false)}>
         <View className="flex-1 items-center bg-black/70 px-6 pt-40">
@@ -113,6 +123,17 @@ export default function Expenses() {
         onApply={(r) => {
           setRange(r);
           setCalOpen(false);
+        }}
+      />
+
+      <ExpenseSheet
+        expense={selectedExpense}
+        onClose={() => setSelectedId(null)}
+        onChange={(patch) => selectedExpense && updateExpense(selectedExpense.id, patch)}
+        onDelete={() => {
+          if (!selectedExpense) return;
+          deleteExpense(selectedExpense.id);
+          setSelectedId(null);
         }}
       />
 
@@ -205,7 +226,13 @@ export default function Expenses() {
       )}
 
       {groups.length === 0 && (
-        <Text className="mt-8 text-center text-neutral-500">No expenses here yet.</Text>
+        <Text className="mt-8 text-center text-neutral-500">
+          {
+            expenses.length === 0
+            ? "No expenses yet. Scan a QR code to add your first one."
+            : "No expenses match these filters."
+          }
+        </Text>
       )}
 
       {/* One header per day, with that day's confirmed total */}
@@ -231,12 +258,13 @@ export default function Expenses() {
                 const via = item.app ? PAY_APPS[item.app] : "Cash";
 
                 return (
-                  <View
+                  <Pressable
                     key={item.id}
+                    onPress={() => {setSelectedId(item.id);}}
                     className={`flex-row items-center gap-3 p-4 ${
                       i > 0 ? "border-t border-neutral-800" : ""
-                    }`}
-                  >
+                    }`}>
+
                     <View
                       className="h-11 w-11 items-center justify-center rounded-full"
                       style={{ backgroundColor: cat.color + "33" }}
@@ -267,7 +295,7 @@ export default function Expenses() {
                         </Text>
                       </View>
                     </View>
-                  </View>
+                  </Pressable>
                 );
               })}
             </View>

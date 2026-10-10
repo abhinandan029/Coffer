@@ -35,6 +35,9 @@ const ago = ( days, hour, minute = 0) => {
   return d.toISOString()
 }
 
+export const payVia = (e) =>
+  e.source === "cash" ? "Cash" : e.app ? PAY_APPS[e.app] : "UPI";
+
 export const DUMMY_EXPENSES = [
   { id: 1, amount: 320, payeeName: "Third Wave Coffee", payeeUpiId: "thirdwave@okaxis", note: "Coffee & sandwich", category: "food", source: "scan", app: "gpay", createdAt: ago(0, 9, 15), status: "CONFIRMED" },
   { id: 2, amount: 150, payeeName: "Ravi (auto)", payeeUpiId: "ravi.auto@ybl", note: "Auto to office", category: "transport", source: "manual", app: "phonepe", createdAt: ago(0, 8, 40), status: "CONFIRMED" },
