@@ -1,12 +1,17 @@
 import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { CameraView, useCameraPermissions } from "expo-camera";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
 
-export default function ScannerScreen({ onClose }) {
+import { parseUpiUri } from "../utils/upi";
+
+export default function ScannerScreen({ onClose, onScanned, onManual, paused }) {
   const [permission, requestPermission] = useCameraPermissions();
   const [torch, setTorch] = useState(false);
-  const [result, setResult] = useState(null);
+
+  const [hint, setHint] = useState(null);
+  const lastBad = useRef(0);
+  const hintTimer = useRef(null);
 
   // Permission status still loading
   if (!permission) return <View className="flex-1 bg-black" />;
@@ -31,9 +36,22 @@ export default function ScannerScreen({ onClose }) {
     );
   }
 
-  const handleScan = ({ type, data }) => {
-    if (result) return; // ignore repeat detections
-    setResult({ type, data });
+  const handleScan = ({ data }) => {
+    if (paused) return;
+
+    const parsed = parseUpiUri(data);
+    if (parsed) {
+      onScanned(parsed);
+      return;
+    }
+
+    // Not a UPI QR: show a hint, but at most once every 2 seconds
+    const now = Date.now();
+    if (now - lastBad.current < 2000) return;
+    lastBad.current = now;
+    setHint("That's not a UPI QR code");
+    clearTimeout(hintTimer.current);
+    hintTimer.current = setTimeout(() => setHint(null), 2000);
   };
 
   return (
@@ -42,10 +60,8 @@ export default function ScannerScreen({ onClose }) {
         style={StyleSheet.absoluteFill}
         facing="back"
         enableTorch={torch}
-        barcodeScannerSettings={{
-          barcodeTypes: ["qr", "ean13", "ean8", "upc_a", "code128"],
-        }}
-        onBarcodeScanned={result ? undefined : handleScan}
+        barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
+        onBarcodeScanned={paused ? undefined : handleScan}
       />
 
       {/* Top bar */}
@@ -71,21 +87,22 @@ export default function ScannerScreen({ onClose }) {
           <View className="absolute bottom-0 right-0 h-10 w-10 rounded-br-3xl border-b-4 border-r-4 border-white" />
         </View>
         <Text className="mt-6 text-white">Align the code inside the frame</Text>
+
+        <Pressable
+          onPress={onManual}
+          className="mt-6 flex-row items-center gap-2 rounded-full bg-white/15 px-5 py-3">
+          <Ionicons name="keypad-outline" size={18} color="white" />
+          <Text className="font-semibold text-white">Enter UPI ID manually</Text>
+        </Pressable>
+
       </View>
 
-      {/* Result card (sits above the floating navbar) */}
-      {result && (
-        <View className="absolute bottom-36 left-6 right-6 gap-3 rounded-3xl bg-white p-4">
-          <Text className="text-xs uppercase text-gray-400">{result.type}</Text>
-          <Text className="text-base font-semibold" numberOfLines={3}>
-            {result.data}
-          </Text>
-          <Pressable
-            onPress={() => setResult(null)}
-            className="items-center rounded-2xl bg-black py-3"
-          >
-            <Text className="font-semibold text-white">Scan again</Text>
-          </Pressable>
+      {/* Result card */}
+      {hint && (
+        <View className="absolute left-0 right-0 items-center" style={{ bottom: 160 }}>
+          <View className="rounded-full bg-red-500 px-4 py-2 border border-red-500">
+            <Text className="text-white">{hint}</Text>
+          </View>
         </View>
       )}
     </View>
