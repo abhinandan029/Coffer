@@ -38,7 +38,7 @@ function groupByDate(list) {
   return groups;
 }
 
-export default function Dashboard() {
+export default function Expenses() {
   const [filter, setFilter] = useState("all");
 
   const total = EXPENSES.reduce((sum, e) => sum + e.amount, 0);

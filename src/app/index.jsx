@@ -5,12 +5,12 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Header from "../components/Header.jsx";
 import NavBar from "../components/NavBar.jsx";
 
-import Dashboard from "../screens/Dashboard.jsx";
+import Expenses from "../screens/Expenses.jsx";
 import Ledger from "../screens/Ledger.jsx";
 import Scanner from "../screens/Scanner.jsx";
 
 const screens = {
-  expenses: Dashboard,
+  expenses: Expenses,
   ledger: Ledger,
   scanner: Scanner,
 };
