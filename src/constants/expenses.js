@@ -19,7 +19,7 @@ export const STATUS = {
   PENDING : {label : "Pending", badge : "bg-amber-400/20", text : "text-amber-400"},
   CONFIRMED : {label : "Confirmed", badge : "bg-lime-300/20", text : "text-lime-300"},
   FAILED : {label : "Failed", badge : "bg-red-400/20", text : "text-red-400"},
-  CANCELLED : {label : "Cancelled", badge : "bg-neutral-700", text : "text-neutral-700"}
+  CANCELLED : {label : "Cancelled", badge : "bg-neutral-700", text : "text-neutral-100"}
 }
 
 export const PAY_APPS = {
@@ -31,7 +31,7 @@ export const PAY_APPS = {
 const ago = ( days, hour, minute = 0) => {
   const d = new Date()
   d.setDate(d.getDate() - days)
-  d.getHours(hour, minute, 0, 0)
+  d.setHours(hour, minute, 0, 0)
   return d.toISOString()
 }
 
