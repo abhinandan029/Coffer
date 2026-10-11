@@ -1,13 +1,17 @@
 import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { CameraView, useCameraPermissions } from "expo-camera";
+import * as ImagePicker from "expo-image-picker";
 import { useRef, useState } from "react";
 import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
 
+import { findUpiQr } from "../utils/qrFromImage";
 import { parseUpiUri } from "../utils/upi";
 
 export default function ScannerScreen({ onClose, onScanned, onManual, paused }) {
   const [permission, requestPermission] = useCameraPermissions();
   const [torch, setTorch] = useState(false);
+
+  const [picking, setPicking] = useState(false);
 
   const [hint, setHint] = useState(null);
   const lastBad = useRef(0);
@@ -54,6 +58,34 @@ export default function ScannerScreen({ onClose, onScanned, onManual, paused }) 
     hintTimer.current = setTimeout(() => setHint(null), 2000);
   };
 
+  const pickFromGallery = async () => {
+    if (picking || paused) return;
+    setPicking(true);
+
+    try {
+      const picked = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        quality: 1,
+      });
+      if (picked.canceled) return;
+
+      const { payment, sawQr } = await findUpiQr(picked.assets[0].uri);
+
+      if (payment) onScanned(payment);
+      else showHint(sawQr ? "That's not a UPI QR code" : "No QR code found. Try a clearer image");
+    } catch {
+      showHint("Couldn't read that image");
+    } finally {
+      setPicking(false);
+    }
+  };
+
+  const showHint = (text) => {
+    setHint(text);
+    clearTimeout(hintTimer.current);
+    hintTimer.current = setTimeout(() => setHint(null), 3500);
+  };
+
   return (
     <View className="flex-1 bg-black">
       <CameraView
@@ -88,23 +120,38 @@ export default function ScannerScreen({ onClose, onScanned, onManual, paused }) 
         </View>
         <Text className="mt-6 text-white">Align the code inside the frame</Text>
 
-        <Pressable
-          onPress={onManual}
-          className="mt-6 flex-row items-center gap-2 rounded-full bg-white/15 px-5 py-3">
-          <Ionicons name="keypad-outline" size={18} color="white" />
-          <Text className="font-semibold text-white">Enter UPI ID manually</Text>
-        </Pressable>
+        <View className="mt-6 flex-row gap-3">
+          <Pressable
+            onPress={pickFromGallery}
+            disabled={picking}
+            className="flex-row items-center gap-2 rounded-full bg-white/15 px-5 py-3"
+          >
+            <Ionicons name="image-outline" size={18} color="white" />
+            <Text className="font-semibold text-white">
+              {picking ? "Reading..." : "Upload QR"}
+            </Text>
+          </Pressable>
+
+          <Pressable
+            onPress={onManual}
+            className="flex-row items-center gap-2 rounded-full bg-white/15 px-5 py-3"
+          >
+            <Ionicons name="keypad-outline" size={18} color="white" />
+            <Text className="font-semibold text-white">Enter UPI ID</Text>
+          </Pressable>
+        </View>
 
       </View>
 
       {/* Result card */}
       {hint && (
-        <View className="absolute left-0 right-0 items-center" style={{ bottom: 160 }}>
-          <View className="rounded-full bg-red-500 px-4 py-2 border border-red-500">
-            <Text className="text-white">{hint}</Text>
+        <View className="absolute left-0 right-0 items-center px-6" style={{ bottom: 160 }}>
+          <View className="rounded-2xl bg-black/70 px-4 py-2">
+            <Text className="text-center text-white">{hint}</Text>
           </View>
         </View>
       )}
+
     </View>
   );
 }

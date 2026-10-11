@@ -28,8 +28,11 @@ export function parseUpiUri(raw){
 
   const amount = Math.round(parseFloat(params.am) * 100) / 100
 
+  const mc = (params.mc ?? "").trim();
+
   return {
     source : "scan",
+    kind : mc && mc !== "0000" ? "merchant" : "personal",
     payeeUpiId : upiId,
     payeeName : (params.pn ?? "").trim(),
     amount : amount > 0 ? amount : null,
@@ -57,3 +60,11 @@ export function buildPayUrl({ payeeUpiId, payeeName, amount, note }, appKey = nu
   const base = (appKey && IOS_SCHEMES[appKey]) || "upi://pay";
   return `${base}?${query.join("&")}`;
 }
+
+const OPEN_SCHEMES = {
+  gpay: "gpay://",
+  phonepe: "phonepe://",
+  paytm: "paytmmp://",
+};
+
+export const openAppUrl = (appKey) => OPEN_SCHEMES[appKey];
