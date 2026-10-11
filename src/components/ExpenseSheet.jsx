@@ -12,7 +12,7 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { CATEGORIES, PAY_APPS, STATUS } from "../constants/expenses";
+import { CATEGORIES, STATUS, payVia } from "../constants/expenses";
 import { dayLabel, money } from "../utils/format";
 
 // Keeps digits and one decimal point, with at most two decimal places
@@ -107,9 +107,7 @@ function SheetBody({ expense, onClose, onChange, onDelete }) {
         {/* Details */}
         <View className="gap-2 rounded-2xl bg-neutral-800 p-4">
           <Row label="Paid via">
-            <Text className="text-sm text-white">
-              {expense.app ? PAY_APPS[expense.app] : "Cash"}
-            </Text>
+            <Text className="text-sm text-white">{payVia(expense)}</Text>
           </Row>
           {!!expense.payeeUpiId && (
             <Row label="UPI ID">

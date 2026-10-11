@@ -2,20 +2,18 @@ import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { useState } from "react";
 import { Modal, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 
-import ExpenseSheet from "../components/ExpenseSheet";
-import { useExpenses } from "../contexts/ExpensesContext";
-
+import AddExpense from "../components/AddExpense";
 import CalendarFilter from "../components/CalendarFilter";
+import ExpenseSheet from "../components/ExpenseSheet";
 import {
   CATEGORIES,
-  PAY_APPS,
   STATUS,
-  UNCATEGORIZED
+  UNCATEGORIZED,
+  payVia,
 } from "../constants/expenses";
+import { useExpenses } from "../contexts/ExpensesContext";
 import useBudget from "../hooks/useBudget";
-
 import { dayKey, dayLabel, isThisMonth, money, rangeLabel } from "../utils/format";
-
 
 // One entry per calendar day, in the order the (already sorted) list arrives
 function groupByDay(list) {
@@ -37,7 +35,7 @@ const inRange = (iso, range) => {
   return day.getTime() >= lo && day.getTime() <= hi;
 };
 
-export default function Expenses() {
+export default function Expenses({ onReviewPending }) {
   const [filter, setFilter] = useState("all");
   const [range, setRange] = useState({ start: null, end: null });
   const [calOpen, setCalOpen] = useState(false);
@@ -46,8 +44,10 @@ export default function Expenses() {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
 
- const { expenses, loaded, updateExpense, deleteExpense } = useExpenses();
+  const { expenses, loaded, addExpense, updateExpense, deleteExpense } = useExpenses();
   const [selectedId, setSelectedId] = useState(null);
+
+  const [adding, setAdding] = useState(false);
 
   const openEditor = () => {
     setDraft(String(budget));
@@ -55,7 +55,11 @@ export default function Expenses() {
   };
 
   if (!loaded) return null;
+
   const selectedExpense = expenses.find((e) => e?.id === selectedId) ?? null;
+
+  // Payments waiting for a "Did it go through?" answer
+  const awaiting = expenses.filter((e) => e?.needsConfirm).length;
 
   const saveBudget = () => {
     const n = parseInt(draft.replace(/[^0-9]/g, ""), 10);
@@ -80,10 +84,31 @@ export default function Expenses() {
   const hasRange = !!range.start;
 
   return (
-    <ScrollView 
-    contentContainerClassName="p-4 pb-32 gap-5"
-    keyboardShouldPersistTaps="handled">
-      
+    <ScrollView
+      contentContainerClassName="p-4 pb-32 gap-5"
+      keyboardShouldPersistTaps="handled"
+    >
+      {/* Needs-confirmation banner */}
+      {awaiting > 0 && (
+        <Pressable
+          onPress={onReviewPending}
+          className="flex-row items-center gap-3 rounded-2xl border border-amber-400/30 bg-amber-400/10 p-4"
+        >
+          <Ionicons name="help-circle" size={22} color="#fbbf24" />
+          <View className="flex-1">
+            <Text className="font-semibold text-amber-200">
+              {awaiting === 1
+                ? "1 payment needs confirmation"
+                : `${awaiting} payments need confirmation`}
+            </Text>
+            <Text className="text-xs text-amber-200/70">
+              Tap to confirm whether they went through
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color="#fbbf24" />
+        </Pressable>
+      )}
+
       {/* Budget editor */}
       <Modal visible={editing} transparent animationType="fade" onRequestClose={() => setEditing(false)}>
         <View className="flex-1 items-center bg-black/70 px-6 pt-40">
@@ -126,10 +151,27 @@ export default function Expenses() {
         }}
       />
 
+      {/* Log a payment made outside Coffer */}
+      <AddExpense
+        visible={adding}
+        onClose={() => setAdding(false)}
+        onSave={(data) => {
+          addExpense(data);
+          setAdding(false);
+        }}
+      />
+
+      {/* Expense details: changing the status by hand also clears the "needs confirmation" flag */}
       <ExpenseSheet
         expense={selectedExpense}
         onClose={() => setSelectedId(null)}
-        onChange={(patch) => selectedExpense && updateExpense(selectedExpense.id, patch)}
+        onChange={(patch) =>
+          selectedExpense &&
+          updateExpense(
+            selectedExpense.id,
+            "status" in patch ? { ...patch, needsConfirm: false } : patch
+          )
+        }
         onDelete={() => {
           if (!selectedExpense) return;
           deleteExpense(selectedExpense.id);
@@ -139,17 +181,7 @@ export default function Expenses() {
 
       {/* Summary card: only confirmed expenses count toward the total */}
       <View className="rounded-3xl bg-neutral-900 p-5">
-        <View className="flex-row items-center justify-between">
-          <Text className="text-sm text-neutral-400">Spent this month</Text>
-
-          <Pressable
-            onPress={openEditor}
-            hitSlop={8}
-            className="h-11 w-11 items-center justify-center rounded-full bg-neutral-700"
-          >
-            <Ionicons name="pencil" size={24} color="white" />
-          </Pressable>
-        </View>
+        <Text className="text-sm text-neutral-400">Spent this month</Text>
 
         <View className="mt-1 flex-row items-baseline">
           <Text className="text-4xl font-bold text-white">{money(spent)}</Text>
@@ -166,16 +198,36 @@ export default function Expenses() {
           <View className="h-2 rounded-full bg-lime-300" style={{ width: `${percent}%` }} />
         </View>
 
-        <Text className="mt-2 ml-auto text-sm text-neutral-200">
+        <Text className="my-2 ml-auto text-sm text-neutral-200">
           {money(Math.max(budget - spent, 0))} left
         </Text>
+
+        <View className="ml-auto flex-row items-center gap-2">
+          <Pressable
+            onPress={openEditor}
+            hitSlop={8}
+            className="flex-row items-center gap-1 rounded-xl bg-neutral-700 px-2 py-1"
+          >
+            <Ionicons name="pencil" size={20} color="white" />
+            <Text className="text-sm text-neutral-200">Edit Budget</Text>
+          </Pressable>
+
+          <Pressable
+            onPress={() => setAdding(true)}
+            hitSlop={8}
+            className="flex-row items-center gap-1 rounded-xl bg-lime-300 px-2 py-1"
+          >
+            <Ionicons name="add" size={20} color="black" />
+            <Text className="text-sm text-black">Add Expense</Text>
+          </Pressable>
+        </View>
       </View>
 
       {/* Filters: calendar button + category chips */}
       <View className="flex-row items-center gap-2">
         <Pressable
           onPress={() => setCalOpen(true)}
-          className={`h-10 w-10 items-center justify-center border border-white/40 rounded-full ${
+          className={`h-10 w-10 items-center justify-center rounded-full border border-white/40 ${
             hasRange ? "bg-lime-300" : "bg-neutral-800"
           }`}
         >
@@ -193,16 +245,16 @@ export default function Expenses() {
           contentContainerClassName="gap-2"
         >
           {[["all", { label: "All" }], ...Object.entries(CATEGORIES)].map(([key, cat]) => {
-            const selected = filter === key;
+            const isSelected = filter === key;
             return (
               <Pressable
                 key={key}
                 onPress={() => setFilter(key)}
-                className={`rounded-full px-4 py-2 ${selected ? "bg-white" : "bg-neutral-800"}`}
+                className={`rounded-full px-4 py-2 ${isSelected ? "bg-white" : "bg-neutral-800"}`}
               >
                 <Text
                   className={`text-sm font-semibold ${
-                    selected ? "text-black" : "text-neutral-300"
+                    isSelected ? "text-black" : "text-neutral-300"
                   }`}
                 >
                   {cat.label}
@@ -227,11 +279,9 @@ export default function Expenses() {
 
       {groups.length === 0 && (
         <Text className="mt-8 text-center text-neutral-500">
-          {
-            expenses.length === 0
+          {expenses.length === 0
             ? "No expenses yet. Scan a QR code to add your first one."
-            : "No expenses match these filters."
-          }
+            : "No expenses match these filters."}
         </Text>
       )}
 
@@ -255,16 +305,16 @@ export default function Expenses() {
                 const cat = CATEGORIES[item.category] ?? UNCATEGORIZED;
                 const status = STATUS[item.status];
                 const counted = item.status === "CONFIRMED" || item.status === "PENDING";
-                const via = item.app ? PAY_APPS[item.app] : "Cash";
+                const via = payVia(item);
 
                 return (
                   <Pressable
                     key={item.id}
-                    onPress={() => {setSelectedId(item.id);}}
+                    onPress={() => setSelectedId(item.id)}
                     className={`flex-row items-center gap-3 p-4 ${
                       i > 0 ? "border-t border-neutral-800" : ""
-                    }`}>
-
+                    }`}
+                  >
                     <View
                       className="h-11 w-11 items-center justify-center rounded-full"
                       style={{ backgroundColor: cat.color + "33" }}
