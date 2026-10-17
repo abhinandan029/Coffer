@@ -1,4 +1,4 @@
-import { Ionicons } from "@react-native-vector-icons/ionicons";
+import { Ionicons } from "@expo/vector-icons";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { useRef, useState } from "react";
 import { Linking, Pressable, StyleSheet, Text, View } from "react-native";

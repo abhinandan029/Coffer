@@ -1,6 +1,6 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
 import { Modal, Pressable, Text, View } from "react-native";
-import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { keyOf, rangeLabel } from "../utils/format";
 
 const WEEK = ["S", "M", "T", "W", "T", "F", "S"];

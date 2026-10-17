@@ -1,4 +1,4 @@
-import { Ionicons } from "@react-native-vector-icons/ionicons";
+import { Ionicons } from "@expo/vector-icons";
 import { Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 

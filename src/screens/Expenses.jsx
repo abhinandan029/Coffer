@@ -1,4 +1,4 @@
-import { Ionicons } from "@react-native-vector-icons/ionicons";
+import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { Modal, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 
@@ -6,10 +6,10 @@ import AddExpense from "../components/AddExpense";
 import CalendarFilter from "../components/CalendarFilter";
 import ExpenseSheet from "../components/ExpenseSheet";
 import {
-  CATEGORIES,
-  STATUS,
-  UNCATEGORIZED,
-  payVia,
+    CATEGORIES,
+    STATUS,
+    UNCATEGORIZED,
+    payVia,
 } from "../constants/expenses";
 import { useExpenses } from "../contexts/ExpensesContext";
 import useBudget from "../hooks/useBudget";
