@@ -1,24 +1,14 @@
-import { Ionicons } from "@expo/vector-icons";
-import { Pressable, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-function Header({ transparent = false }) {
+function Header() {
   const insets = useSafeAreaInsets();
 
   return (
     <View
-      className={
-        transparent
-          ? "absolute left-0 right-0 top-0 z-10 flex-row items-center justify-between p-4"
-          : "flex-row items-center justify-between bg-black p-4"
-      }
-      style={transparent ? { paddingTop: insets.top + 16 } : undefined}
+      className="flex flex-row p-3 justify-between"
     >
       <Text className="font-serif text-4xl font-bold text-white">Coffer</Text>
-
-      <Pressable onPress={() => console.log("menu pressed")}>
-        <Ionicons name="menu" size={32} color="white" />
-      </Pressable>
     </View>
   );
 }

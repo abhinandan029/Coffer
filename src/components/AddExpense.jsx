@@ -30,7 +30,7 @@ const startOfToday = () => {
 };
 
 // Outer shell: the form only exists while the sheet is open, so it starts fresh each time
-export default function AddExpense({ visible, onClose, onSave }) {
+export default function AddExpense({ visible, onClose, onSave, onPay }) {
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <KeyboardAvoidingView
@@ -41,18 +41,19 @@ export default function AddExpense({ visible, onClose, onSave }) {
           className="absolute bottom-0 left-0 right-0 top-0 bg-black/70"
           onPress={onClose}
         />
-        {visible ? <Body onClose={onClose} onSave={onSave} /> : null}
+        {visible ? <Body onClose={onClose} onSave={onSave} onPay={onPay}/> : null}
       </KeyboardAvoidingView>
     </Modal>
   );
 }
 
-function Body({ onClose, onSave }) {
+function Body({ onClose, onSave, onPay }) {
   const insets = useSafeAreaInsets();
   const today = startOfToday();
 
   const [amount, setAmount] = useState("");
-  const [how, setHow] = useState("cash"); // "cash" | "upi"
+  const [stage, setStage] = useState("pay");          // "pay" / "paid"
+  const [how, setHow] = useState("upi")                // cash or upi
   const [name, setName] = useState("");
   const [category, setCategory] = useState(null);
   const [date, setDate] = useState(today);
@@ -67,19 +68,19 @@ function Body({ onClose, onSave }) {
     setPickingDate(true);
   };
 
+  // Today keeps the current time; past days use midday so they sort sensibly
+  const when = new Date(date);
+  if (isToday) {
+    const now = new Date();
+    when.setHours(now.getHours(), now.getMinutes(), 0, 0);
+  } else {
+    when.setHours(12, 0, 0, 0);
+  }
+
   const save = () => {
     const n = Math.round(parseFloat(amount) * 100) / 100;
     if (!(n > 0)) return setError("Enter an amount greater than 0");
     if (n > MAX_AMOUNT) return setError("That amount looks too large");
-
-    // Today keeps the current time; past days use midday so they sort sensibly
-    const when = new Date(date);
-    if (isToday) {
-      const now = new Date();
-      when.setHours(now.getHours(), now.getMinutes(), 0, 0);
-    } else {
-      when.setHours(12, 0, 0, 0);
-    }
 
     onSave({
       amount: n,
@@ -91,6 +92,25 @@ function Body({ onClose, onSave }) {
       app: null,
       status: "CONFIRMED",
       needsConfirm: false,
+      createdAt: when.toISOString(),
+    });
+  };
+
+  const pay = () => {
+    const n =  Math.round(parseFloat(amount) * 100) / 100;
+    if (!(n > 0)) return setError("Enter an amount greater than 0");
+    if (n > MAX_AMOUNT) return setError("That amount looks too large");
+
+    onPay?.({
+      amount: n,
+      payeeName: name.trim() || "UPI payment",
+      payeeUpiId: null,
+      note: note.trim(),
+      category,
+      source: how === "cash" ? "cash" : "manual",
+      app: null,
+      status: "PENDING",
+      needsConfirm: true,
       createdAt: when.toISOString(),
     });
   };
@@ -139,26 +159,45 @@ function Body({ onClose, onSave }) {
           {!!error && <Text className="text-xs text-red-400">{error}</Text>}
         </View>
 
-        {/* Cash / UPI */}
+        {/* about to pay / already paid */}
         <View className="flex-row gap-1 rounded-2xl bg-neutral-800 p-1">
           {[
-            ["cash", "Cash"],
-            ["upi", "UPI (paid elsewhere)"],
+            ["pay", "About to pay"],
+            ["paid", "Already paid"],
           ].map(([key, label]) => (
             <Pressable
               key={key}
-              onPress={() => setHow(key)}
-              className={`flex-1 items-center rounded-xl py-2 ${how === key ? "bg-white" : ""}`}
+              onPress={() => setStage(key)}
+              className={`flex-1 items-center rounded-xl py-2 ${stage === key ? "bg-lime-200" : ""}`}
             >
               <Text
                 className={`text-sm font-semibold ${
-                  how === key ? "text-black" : "text-neutral-300"
+                  stage === key ? "text-black" : "text-neutral-300"
                 }`}
               >
                 {label}
               </Text>
             </Pressable>
           ))}
+        </View>
+
+        <View className="flex">
+          <Text className="text-neutral-200 text-sm pb-2">Select payment type</Text>
+            
+          <View className="flex-row gap-1 rounded-2xl bg-neutral-800 p-1">
+            {
+              [["upi", "UPI"], ["cash", "Cash"]].map(([key, label]) => {
+                return (
+                  <Pressable
+                  key={key}
+                  onPress={() => setHow(key)}
+                  className={`flex-1 items-center rounded-xl py-2 ${key === how ? "bg-lime-200" : ""}`}>
+                    <Text className={`text-sm font-semibold ${key === how ? "text-black" : "text-white"}`}>{label}</Text>
+                  </Pressable>
+                )
+              })
+            }
+          </View>
         </View>
 
         {/* Paid to */}
@@ -169,6 +208,36 @@ function Body({ onClose, onSave }) {
             onChangeText={setName}
             maxLength={40}
             placeholder="e.g. Chai stall"
+            placeholderTextColor="#737373"
+            className="rounded-2xl bg-neutral-800 px-4 py-3 text-base text-white"
+          />
+        </View>
+
+        {/* Date */}
+        <View className="gap-2">
+          <Text className="text-sm font-semibold text-neutral-400">Date</Text>
+          <Pressable
+            onPress={openCalendar}
+            className="flex-row items-center justify-between rounded-2xl bg-neutral-800 px-4 py-3"
+          >
+            <Text className="text-base font-semibold text-white">
+              {dayLabel(date.toISOString())}
+            </Text>
+            <Ionicons name="calendar-outline" size={20} color="#d4d4d4" />
+          </Pressable>
+        </View>
+
+        {/* Note */}
+        <View className="gap-2">
+          <View className="flex-row items-center justify-between">
+            <Text className="text-sm font-semibold text-neutral-400">Note</Text>
+            <Text className="text-xs text-neutral-500">{note.length}/50</Text>
+          </View>
+          <TextInput
+            value={note}
+            onChangeText={setNote}
+            maxLength={50}
+            placeholder="Add a note"
             placeholderTextColor="#737373"
             className="rounded-2xl bg-neutral-800 px-4 py-3 text-base text-white"
           />
@@ -202,35 +271,6 @@ function Body({ onClose, onSave }) {
           </View>
         </View>
 
-        {/* Date */}
-        <View className="gap-2">
-          <Text className="text-sm font-semibold text-neutral-400">Date</Text>
-          <Pressable
-            onPress={openCalendar}
-            className="flex-row items-center justify-between rounded-2xl bg-neutral-800 px-4 py-3"
-          >
-            <Text className="text-base font-semibold text-white">
-              {dayLabel(date.toISOString())}
-            </Text>
-            <Ionicons name="calendar-outline" size={20} color="#d4d4d4" />
-          </Pressable>
-        </View>
-
-        {/* Note */}
-        <View className="gap-2">
-          <View className="flex-row items-center justify-between">
-            <Text className="text-sm font-semibold text-neutral-400">Note</Text>
-            <Text className="text-xs text-neutral-500">{note.length}/50</Text>
-          </View>
-          <TextInput
-            value={note}
-            onChangeText={setNote}
-            maxLength={50}
-            placeholder="Add a note"
-            placeholderTextColor="#737373"
-            className="rounded-2xl bg-neutral-800 px-4 py-3 text-base text-white"
-          />
-        </View>
 
         {/* Actions */}
         <View className="flex-row gap-3">
@@ -241,10 +281,10 @@ function Body({ onClose, onSave }) {
             <Text className="font-semibold text-white">Cancel</Text>
           </Pressable>
           <Pressable
-            onPress={save}
+            onPress={stage === "pay" ? how === "upi" ? pay : save : save}
             className="flex-1 items-center justify-center rounded-2xl bg-lime-300 py-3"
           >
-            <Text className="font-semibold text-black">Save</Text>
+            <Text className="font-bold text-black">{stage === "pay" ? how === "upi" ? "Pay →" : "Save" : "save"}</Text>
           </Pressable>
         </View>
       </ScrollView>

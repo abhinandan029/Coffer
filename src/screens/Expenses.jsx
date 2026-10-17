@@ -2,16 +2,17 @@ import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { Modal, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 
-import AddExpense from "../components/AddExpense";
 import CalendarFilter from "../components/CalendarFilter";
 import ExpenseSheet from "../components/ExpenseSheet";
 import {
-    CATEGORIES,
-    STATUS,
-    UNCATEGORIZED,
-    payVia,
+  CATEGORIES,
+  STATUS,
+  UNCATEGORIZED,
+  payVia,
 } from "../constants/expenses";
+
 import { useExpenses } from "../contexts/ExpensesContext";
+
 import useBudget from "../hooks/useBudget";
 import { dayKey, dayLabel, isThisMonth, money, rangeLabel } from "../utils/format";
 
@@ -44,10 +45,8 @@ export default function Expenses({ onReviewPending }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
 
-  const { expenses, loaded, addExpense, updateExpense, deleteExpense } = useExpenses();
+  const { expenses, loaded, updateExpense, deleteExpense } = useExpenses();
   const [selectedId, setSelectedId] = useState(null);
-
-  const [adding, setAdding] = useState(false);
 
   const openEditor = () => {
     setDraft(String(budget));
@@ -84,15 +83,13 @@ export default function Expenses({ onReviewPending }) {
   const hasRange = !!range.start;
 
   return (
-    <ScrollView
-      contentContainerClassName="p-4 pb-32 gap-5"
-      keyboardShouldPersistTaps="handled"
+    <View className="flex-1"
     >
       {/* Needs-confirmation banner */}
       {awaiting > 0 && (
         <Pressable
           onPress={onReviewPending}
-          className="flex-row items-center gap-3 rounded-2xl border border-amber-400/30 bg-amber-400/10 p-4"
+          className="flex-row items-center gap-3 rounded-2xl border border-amber-400/30 bg-amber-400/10 p-4 mx-2 mb-3"
         >
           <Ionicons name="help-circle" size={22} color="#fbbf24" />
           <View className="flex-1">
@@ -151,16 +148,6 @@ export default function Expenses({ onReviewPending }) {
         }}
       />
 
-      {/* Log a payment made outside Coffer */}
-      <AddExpense
-        visible={adding}
-        onClose={() => setAdding(false)}
-        onSave={(data) => {
-          addExpense(data);
-          setAdding(false);
-        }}
-      />
-
       {/* Expense details: changing the status by hand also clears the "needs confirmation" flag */}
       <ExpenseSheet
         expense={selectedExpense}
@@ -180,7 +167,7 @@ export default function Expenses({ onReviewPending }) {
       />
 
       {/* Summary card: only confirmed expenses count toward the total */}
-      <View className="rounded-3xl bg-neutral-900 p-5">
+      <View className="rounded-3xl bg-neutral-900 p-5 mx-2 mb-2">
         <Text className="text-sm text-neutral-400">Spent this month</Text>
 
         <View className="mt-1 flex-row items-baseline">
@@ -211,20 +198,11 @@ export default function Expenses({ onReviewPending }) {
             <Ionicons name="pencil" size={20} color="white" />
             <Text className="text-sm text-neutral-200">Edit Budget</Text>
           </Pressable>
-
-          <Pressable
-            onPress={() => setAdding(true)}
-            hitSlop={8}
-            className="flex-row items-center gap-1 rounded-xl bg-lime-300 px-2 py-1"
-          >
-            <Ionicons name="add" size={20} color="black" />
-            <Text className="text-sm text-black">Add Expense</Text>
-          </Pressable>
         </View>
       </View>
 
       {/* Filters: calendar button + category chips */}
-      <View className="flex-row items-center gap-2">
+      <View className="flex-row items-center gap-2 p-2">
         <Pressable
           onPress={() => setCalOpen(true)}
           className={`h-10 w-10 items-center justify-center rounded-full border border-white/40 ${
@@ -278,80 +256,86 @@ export default function Expenses({ onReviewPending }) {
       )}
 
       {groups.length === 0 && (
-        <Text className="mt-8 text-center text-neutral-500">
+        <Text className="mt-14 text-center text-neutral-500">
           {expenses.length === 0
-            ? "No expenses yet. Scan a QR code to add your first one."
+            ? "No expenses yet. Click the + button to add expenses."
             : "No expenses match these filters."}
         </Text>
       )}
 
       {/* One header per day, with that day's confirmed total */}
-      {groups.map((group) => {
-        const dayTotal = group.items
-          .filter((e) => e.status === "CONFIRMED")
-          .reduce((s, e) => s + e.amount, 0);
+       <ScrollView
+        className="flex-1"
+        contentContainerClassName="gap-5 px-2.5 pb-32 pt-2"
+        keyboardShouldPersistTaps="handled"
+      >
+        {groups.map((group) => {
+          const dayTotal = group.items
+            .filter((e) => e.status === "CONFIRMED")
+            .reduce((s, e) => s + e.amount, 0);
 
-        return (
-          <View key={group.key} className="gap-2">
-            <View className="flex-row items-center justify-between px-3">
-              <Text className="text-sm font-semibold text-neutral-400">{group.label}</Text>
-              {dayTotal > 0 && (
-                <Text className="text-xs text-neutral-200">{money(dayTotal)}</Text>
-              )}
-            </View>
+          return (
+            <View key={group.key} className="gap-2">
+              <View className="flex-row items-center justify-between px-3">
+                <Text className="text-sm font-semibold text-neutral-400">{group.label}</Text>
+                {dayTotal > 0 && (
+                  <Text className="text-xs text-neutral-200">{money(dayTotal)}</Text>
+                )}
+              </View>
 
-            <View className="overflow-hidden rounded-3xl bg-neutral-900">
-              {group.items.map((item, i) => {
-                const cat = CATEGORIES[item.category] ?? UNCATEGORIZED;
-                const status = STATUS[item.status];
-                const counted = item.status === "CONFIRMED" || item.status === "PENDING";
-                const via = payVia(item);
+              <View className="overflow-hidden rounded-3xl bg-neutral-900">
+                {group.items.map((item, i) => {
+                  const cat = CATEGORIES[item.category] ?? UNCATEGORIZED;
+                  const status = STATUS[item.status];
+                  const counted = item.status === "CONFIRMED" || item.status === "PENDING";
+                  const via = payVia(item);
 
-                return (
-                  <Pressable
-                    key={item.id}
-                    onPress={() => setSelectedId(item.id)}
-                    className={`flex-row items-center gap-3 p-4 ${
-                      i > 0 ? "border-t border-neutral-800" : ""
-                    }`}
-                  >
-                    <View
-                      className="h-11 w-11 items-center justify-center rounded-full"
-                      style={{ backgroundColor: cat.color + "33" }}
+                  return (
+                    <Pressable
+                      key={item.id}
+                      onPress={() => setSelectedId(item.id)}
+                      className={`flex-row items-center gap-3 p-4 ${
+                        i > 0 ? "border-t border-neutral-800" : ""
+                      }`}
                     >
-                      <Ionicons name={cat.icon} size={22} color={cat.color} />
-                    </View>
-
-                    <View className="flex-1">
-                      <Text className="text-base font-semibold text-white" numberOfLines={1}>
-                        {item.payeeName}
-                      </Text>
-                      <Text className="text-xs text-neutral-400" numberOfLines={1}>
-                        {cat.label} · {via}
-                      </Text>
-                    </View>
-
-                    <View className="items-end gap-1">
-                      <Text
-                        className={`text-base font-semibold ${
-                          counted ? "text-white" : "text-neutral-500 line-through"
-                        }`}
+                      <View
+                        className="h-11 w-11 items-center justify-center rounded-full"
+                        style={{ backgroundColor: cat.color + "33" }}
                       >
-                        -{money(item.amount)}
-                      </Text>
-                      <View className={`rounded-full px-2 py-0.5 ${status.badge}`}>
-                        <Text className={`text-[10px] font-semibold ${status.text}`}>
-                          {status.label}
+                        <Ionicons name={cat.icon} size={22} color={cat.color} />
+                      </View>
+
+                      <View className="flex-1">
+                        <Text className="text-base font-semibold text-white" numberOfLines={1}>
+                          {item.payeeName}
+                        </Text>
+                        <Text className="text-xs text-neutral-400" numberOfLines={1}>
+                          {cat.label} · {via}
                         </Text>
                       </View>
-                    </View>
-                  </Pressable>
-                );
-              })}
+
+                      <View className="items-end gap-1">
+                        <Text
+                          className={`text-base font-semibold ${
+                            counted ? "text-white" : "text-neutral-500 line-through"
+                          }`}
+                        >
+                          -{money(item.amount)}
+                        </Text>
+                        <View className={`rounded-full px-2 py-0.5 ${status.badge}`}>
+                          <Text className={`text-[10px] font-semibold ${status.text}`}>
+                            {status.label}
+                          </Text>
+                        </View>
+                      </View>
+                    </Pressable>
+                  );
+                })}
+              </View>
             </View>
-          </View>
-        );
-      })}
-    </ScrollView>
+          );
+        })}
+      </ScrollView>
+    </View>
   );
 }

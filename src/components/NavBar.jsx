@@ -4,13 +4,14 @@ import Animated, { Easing, LinearTransition } from "react-native-reanimated";
 
 const items = [
   { label: "expenses", icon: "wallet" },
-  { label: "scanner", icon: "scan" },
+  { label: "add", icon: "add" },
   { label: "ledger", icon: "book" },
 ];
 
 const layout = LinearTransition.duration(250).easing(Easing.linear);
 
-function NavBar({ active, onChange }) {
+function NavBar({ active,onChange, onAdd }) {
+
   return (
     <Animated.View
       layout={layout}
@@ -32,14 +33,11 @@ function NavBar({ active, onChange }) {
     >
       {items.map(({ label, icon }) => {
         // Scanner: always a round button
-        if (label === "scanner") {
+        if (label === "add") {
           return (
             <Animated.View key={label} layout={layout} style={{ marginHorizontal: 4 }}>
-              <Pressable
-                onPress={() => onChange(label)}
-                className="rounded-full bg-green-500 p-3"
-              >
-                <Ionicons name={icon} size={30} color="black" />
+              <Pressable onPress={onAdd} className="rounded-full bg-lime-300 p-3">
+                <Ionicons name="add" size={30} color="black" />
               </Pressable>
             </Animated.View>
           );
