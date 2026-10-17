@@ -8,6 +8,7 @@ import AddExpense from "../components/AddExpense";
 import ConfirmPayment from "../components/ConfirmPayment";
 import Header from "../components/Header.jsx";
 import NavBar from "../components/NavBar.jsx";
+import SmsSync from "../components/SmsSync";
 
 import Expenses from "../screens/Expenses.jsx";
 import Ledger from "../screens/Ledger.jsx";
@@ -62,7 +63,7 @@ function Main() {
     return () => sub.remove();
   }, []);
 
-  const confirmExpense = expenses.find((e) => e?.id === confirmId) ?? null;
+  const confirmExpense = (expenses ?? []).find((e) => e?.id === confirmId) ?? null;
 
   // Returns null on success, or an error message for the review sheet to show
   const handlePay = (data) => {
@@ -132,6 +133,7 @@ function Main() {
 export default function Index() {
   return (
     <ExpensesProvider>
+      <SmsSync />
       <Main />
     </ExpensesProvider>
   );

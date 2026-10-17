@@ -1,9 +1,17 @@
 import AsyncStorage from "@react-native-async-storage/async-storage"
 import { createContext, useContext, useEffect, useState } from "react"
 import { DUMMY_EXPENSES } from "../constants/expenses.js"
+import { registerAppPayment } from "../services/smsService"
 
 const KEY = "expenses:v2"
-const SEED_DUMMY_DATA = true
+const SEED_DUMMY_DATA = false
+
+let lastId = 0
+const nextId = () => {
+  const now = Date.now()
+  lastId = now > lastId ? now : lastId + 1 // always unique, still a number
+  return lastId
+}
 
 const ExpensesContext = createContext(null)
 
@@ -28,13 +36,18 @@ export function ExpensesProvider({ children }) {
 
   const addExpense = (data) => {
     const expense = {
-      id: Date.now(),
+      id: nextId(),
       createdAt: new Date().toISOString(),
       status: "PENDING",
       category: null,
       ...data,
     }
     setExpenses((list) => [expense, ...list])
+
+    // Paid through Coffer: tell the SMS detector to ignore the bank's SMS for this amount
+    if (expense.source !== "sms" && expense.needsConfirm) {
+      registerAppPayment(expense.amount)
+    }
     return expense.id
   }
 

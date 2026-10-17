@@ -39,5 +39,9 @@ yarn-error.*
 example
 
 # generated native folders
-/ios
+
 /android
+/ios
+
+# Native module build output
+/modules/*/android/build/
