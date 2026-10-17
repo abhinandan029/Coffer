@@ -8,7 +8,6 @@ import AddExpense from "../components/AddExpense";
 import ConfirmPayment from "../components/ConfirmPayment";
 import Header from "../components/Header.jsx";
 import NavBar from "../components/NavBar.jsx";
-import PaymentReview from "../components/PaymentReview";
 
 import Expenses from "../screens/Expenses.jsx";
 import Ledger from "../screens/Ledger.jsx";
@@ -104,12 +103,6 @@ function Main() {
       </View>
 
       <NavBar active={tab} onChange={setTab} onAdd={() => setAdding(true)}/>
-
-      <PaymentReview
-        draft={payDraft}
-        onClose={() => setPayDraft(null)}
-        onContinue={handlePay}
-      />
 
       <AddExpense
         visible={adding}
