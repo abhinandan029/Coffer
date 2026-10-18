@@ -30,7 +30,6 @@ export async function setupNotifications() {
     ({ status } = await Notifications.requestPermissionsAsync());
   }
   ready = status === 'granted';
-  console.log('[Notify] permission granted:', ready);
   return ready;
 }
 

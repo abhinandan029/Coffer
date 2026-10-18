@@ -1,6 +1,6 @@
 // src/services/smsService.js
-import { AppState, PermissionsAndroid, Platform } from 'react-native';
 import { requireNativeModule } from 'expo-modules-core';
+import { AppState, PermissionsAndroid, Platform } from 'react-native';
 import { parseBankSms } from '../utils/parseBankSms';
 
 const SmsReader = Platform.OS === 'android' ? requireNativeModule('SmsReader') : null;
@@ -16,7 +16,6 @@ export async function requestSmsPermission() {
         PermissionsAndroid.PERMISSIONS.READ_SMS,
         PermissionsAndroid.PERMISSIONS.RECEIVE_SMS,
       ]);
-      console.log('[SMS] permission result:', JSON.stringify(res));
       return Object.values(res).every((v) => v === PermissionsAndroid.RESULTS.GRANTED);
     } catch (e) {
       if (String(e).includes('not attached to an Activity')) {
@@ -71,8 +70,7 @@ export function startSmsListener(onTransaction) {
   const sub = AppState.addEventListener('change', (state) => {
     if (state === 'active') drain();
   });
-
-  console.log('[SMS] listener started');
+  
   return () => {
     clearInterval(timer);
     sub.remove();

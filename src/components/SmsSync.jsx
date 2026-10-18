@@ -62,7 +62,7 @@ export default function SmsSync() {
         await setupNotifications().catch((e) => console.warn('[Notify] setup failed:', e));
 
         const granted = await requestSmsPermission();
-        console.log('[SMS] permission granted:', granted);
+        
         if (!granted || cancelled) return;
         stop = startSmsListener(save);
       } catch (e) {
