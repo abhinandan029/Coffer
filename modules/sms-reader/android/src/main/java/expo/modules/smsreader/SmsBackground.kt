@@ -9,28 +9,58 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.provider.Telephony
+import android.util.Log
 import org.json.JSONArray
 import org.json.JSONObject
 
 // Decides whether an SMS is a bank debit worth notifying about.
 // Keep in sync with src/utils/parseBankSms.js
 object SmsFilter {
-  const val ALLOW_ANY_SENDER = true // TODO: set to false before release
+  // Set true only to test with texts from a normal phone number
+  const val ALLOW_ANY_SENDER = false
 
-  private val SENDER = Regex("^[A-Za-z]{2}-[A-Za-z0-9]{3,8}$")
-  private val AMOUNT = Regex("(?:rs\\.?|inr|₹)\\s?([\\d,]+(?:\\.\\d{1,2})?)", RegexOption.IGNORE_CASE)
-  private val DEBIT = Regex("\\b(debited|spent|withdrawn|paid|purchase|sent|txn of)\\b", RegexOption.IGNORE_CASE)
-  private val CREDIT = Regex("\\b(credited|received|deposited|refund(?:ed)?)\\b", RegexOption.IGNORE_CASE)
-  private val IGNORE = Regex("\\b(otp|one time password|offer|loan|pre-?approved|cashback offer)\\b", RegexOption.IGNORE_CASE)
+  private val LETTER = Regex("[A-Za-z]")
+  private val CURRENCY_AMOUNT =
+    Regex("(?:rs\\.?|inr|₹)\\s?([\\d,]+(?:\\.\\d{1,2})?)", RegexOption.IGNORE_CASE)
+  // Fallback for banks that write "debited by 500.0" with no currency symbol
+  private val VERB_AMOUNT = Regex(
+    "\\b(?:debited|spent|paid|withdrawn|sent|deducted)\\s+(?:by|for|of|with)?\\s*([\\d,]+(?:\\.\\d{1,2})?)",
+    RegexOption.IGNORE_CASE
+  )
+  private val DEBIT = Regex(
+    "\\b(debited|debit(?!\\s+card)|dr|spent|withdrawn|paid|purchase|sent|deducted|txn of)\\b",
+    RegexOption.IGNORE_CASE
+  )
+  private val CREDIT = Regex(
+    "\\b(credited|cr|received|deposited|refund(?:ed)?)\\b",
+    RegexOption.IGNORE_CASE
+  )
+  private val IGNORE = Regex(
+    "\\b(otp|one time password|offer|loan|pre-?approved|cashback offer)\\b",
+    RegexOption.IGNORE_CASE
+  )
 
-  // Returns the amount text (e.g. "500.00") for a debit, or null if it should be ignored
-  fun debitAmount(address: String, body: String): String? {
-    if (!ALLOW_ANY_SENDER && !SENDER.matches(address)) return null
-    if (IGNORE.containsMatchIn(body)) return null
-    val amount = AMOUNT.find(body)?.groupValues?.get(1) ?: return null
-    val isDebit = DEBIT.containsMatchIn(body)
-    val isCredit = CREDIT.containsMatchIn(body)
-    return if (isDebit && !isCredit) amount else null
+  // amount is non-null only for a debit we should act on; reason is for the log
+  class Result(val amount: String?, val reason: String)
+
+  fun check(address: String, body: String): Result {
+    // Bank senders are alphanumeric IDs; a plain phone number has no letters
+    if (!ALLOW_ANY_SENDER && !LETTER.containsMatchIn(address)) {
+      return Result(null, "ignored: sender is a phone number")
+    }
+    if (IGNORE.containsMatchIn(body)) return Result(null, "ignored: otp/offer/loan text")
+
+    val amount = CURRENCY_AMOUNT.find(body)?.groupValues?.get(1)
+      ?: VERB_AMOUNT.find(body)?.groupValues?.get(1)
+      ?: return Result(null, "ignored: no amount found")
+
+    // "debited from a/c ... credited to merchant" is a debit: whichever word comes first wins
+    val d = DEBIT.find(body)?.range?.first ?: -1
+    val c = CREDIT.find(body)?.range?.first ?: -1
+    val isDebit = d >= 0 && (c < 0 || d < c)
+
+    return if (isDebit) Result(amount, "debit of $amount accepted")
+    else Result(null, "ignored: not a debit")
   }
 }
 
@@ -188,11 +218,18 @@ class SmsBackgroundReceiver : BroadcastReceiver() {
     }
     val body = sb.toString()
 
-    val amount = SmsFilter.debitAmount(address, body) ?: return
+    // Logs only the sender and the decision, never the message text
+    val result = SmsFilter.check(address, body)
+    Log.d("CofferSms", "from=$address -> ${result.reason}")
+
+    val amount = result.amount ?: return
 
     // Paid through Coffer? Then the app already has this payment: ignore the bank's SMS.
     val amountValue = amount.replace(",", "").toDoubleOrNull()
-    if (amountValue != null && AppPayments.consumeIfMatches(context, amountValue)) return
+    if (amountValue != null && AppPayments.consumeIfMatches(context, amountValue)) {
+      Log.d("CofferSms", "from=$address -> ignored: matches a payment made in Coffer")
+      return
+    }
 
     SmsQueue.add(context, address, body, System.currentTimeMillis())
     SmsNotifier.show(context, amount)

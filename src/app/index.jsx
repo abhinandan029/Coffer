@@ -6,6 +6,7 @@ import { ExpensesProvider, useExpenses } from "../contexts/ExpensesContext";
 
 import AddExpense from "../components/AddExpense";
 import ConfirmPayment from "../components/ConfirmPayment";
+import ExpenseSheet from "../components/ExpenseSheet";
 import Header from "../components/Header.jsx";
 import NavBar from "../components/NavBar.jsx";
 import SmsSync from "../components/SmsSync";
@@ -30,6 +31,8 @@ function Main() {
 
   // --- Payment return detection ---
   const [confirmId, setConfirmId] = useState(null);
+  // Set while the expense sheet is open on top of the confirm sheet (the "Edit details" button)
+  const [editingId, setEditingId] = useState(null);
   const snoozed = useRef(new Set()); // "Decide later" ids, until the app restarts
   const expensesRef = useRef(expenses);
   expensesRef.current = expenses; // lets the listener below always see the latest list
@@ -64,6 +67,7 @@ function Main() {
   }, []);
 
   const confirmExpense = (expenses ?? []).find((e) => e?.id === confirmId) ?? null;
+  const editExpense = (expenses ?? []).find((e) => e?.id === editingId) ?? null;
 
   // Returns null on success, or an error message for the review sheet to show
   const handlePay = (data) => {
@@ -115,14 +119,38 @@ function Main() {
         onPay={handlePay}
       />
 
+      {/* Hidden while the expense sheet is open, and shown again (with the edits) after it closes */}
       <ConfirmPayment
-        expense={confirmExpense}
+        expense={editingId ? null : confirmExpense}
         onResolve={(patch) => {
           updateExpense(confirmId, { ...patch, needsConfirm: false });
           setConfirmId(null);
         }}
         onLater={() => {
           snoozed.current.add(confirmId);
+          setConfirmId(null);
+        }}
+        onEdit={() => setEditingId(confirmId)}
+      />
+
+      {/* Edits are saved as you make them, like on the Expenses screen */}
+      <ExpenseSheet
+        expense={editExpense}
+        onClose={() => {
+          // If the status was changed by hand, it no longer needs the "did it go through?" question
+          if (editExpense && !editExpense.needsConfirm) setConfirmId(null);
+          setEditingId(null);
+        }}
+        onChange={(patch) => {
+            if(!editExpense) return ;
+            const next = "status" in patch ? { ...patch, needsConfirm : patch.status === "PENDING"} : patch;
+            updateExpense(editExpense.id, next)
+          }
+        }
+        onDelete={() => {
+          if (!editExpense) return;
+          deleteExpense(editExpense.id);
+          setEditingId(null);
           setConfirmId(null);
         }}
       />

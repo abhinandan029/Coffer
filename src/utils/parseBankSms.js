@@ -1,13 +1,22 @@
 // src/utils/parseBankSms.js
-// Turns a raw bank SMS into { type, amount, merchant, ... } or null.
+// Turns a raw bank SMS into { id, type, amount, merchant, ... } or null.
+// Keep the debit/credit rules in sync with SmsFilter in SmsBackground.kt
 
-const AMOUNT = /(?:rs\.?|inr|₹)\s?([\d,]+(?:\.\d{1,2})?)/i;
-const DEBIT = /\b(debited|spent|withdrawn|paid|purchase|sent|txn of)\b/i;
-const CREDIT = /\b(credited|received|deposited|refund(?:ed)?)\b/i;
+// Set true only to test with texts from a normal phone number
+const ALLOW_ANY_SENDER = false;
+
+const CURRENCY_AMOUNT = /(?:rs\.?|inr|₹)\s?([\d,]+(?:\.\d{1,2})?)/i;
+// Fallback for banks that write "debited by 500.0" with no currency symbol
+const VERB_AMOUNT =
+  /\b(?:debited|spent|paid|withdrawn|sent|deducted)\s+(?:by|for|of|with)?\s*([\d,]+(?:\.\d{1,2})?)/i;
+// "Dr." / "Cr." are used by Bank of Baroda and others
+const DEBIT = /\b(debited|debit(?!\s+card)|dr|spent|withdrawn|paid|purchase|sent|deducted|txn of)\b/i;
+const CREDIT = /\b(credited|cr|received|deposited|refund(?:ed)?)\b/i;
 const IGNORE = /\b(otp|one time password|offer|loan|pre-?approved|cashback offer)\b/i;
 
-// Bank senders look like "VM-HDFCBK", "AX-SBIINB", "JD-ICICIB"
-const BANK_SENDER = /^[A-Z]{2}-[A-Z0-9]{3,8}$/i;
+// Bank senders are alphanumeric IDs (VM-HDFCBK, VM-BOBSMS-S, HDFCBK ...).
+// A plain phone number has no letters, so it is not a bank.
+const isBankSender = (address) => /[A-Za-z]/.test(address);
 
 function simpleHash(str) {
   let h = 0;
@@ -17,26 +26,32 @@ function simpleHash(str) {
 
 export function parseBankSms({ body, address, date }) {
   if (!body || !address) return null;
-  const DEBUG_ALLOW_ANY_SENDER = true; // TODO: set false before release
-  if (!DEBUG_ALLOW_ANY_SENDER && !BANK_SENDER.test(address)) return null;   // skip friends / random numbers
+  if (!ALLOW_ANY_SENDER && !isBankSender(address)) return null;
   if (IGNORE.test(body)) return null;
 
-  const amt = body.match(AMOUNT);
+  const amt = body.match(CURRENCY_AMOUNT) ?? body.match(VERB_AMOUNT);
   if (!amt) return null;
 
-  const isDebit = DEBIT.test(body);
-  const isCredit = CREDIT.test(body);
-  if (isDebit === isCredit) return null; // neither or both -> ambiguous, skip
+  // "Dr. from a/c ... and Cr. to merchant" is a debit: whichever word comes first wins
+  const d = body.search(DEBIT);
+  const c = body.search(CREDIT);
+  const isDebit = d >= 0 && (c < 0 || d < c);
+  const isCredit = c >= 0 && (d < 0 || c < d);
+  if (!isDebit && !isCredit) return null;
 
-  const merchant =
-    body
-      .match(/(?:\bat\b|\bto\b|\bfrom\b|VPA|info:?)\s+([A-Za-z0-9@._ -]{3,30})/i)?.[1]
-      ?.trim() ?? null;
+  // Prefer a UPI id ("to name@bank"), else a name after at/to/from
+  const upi = body.match(/(?:\bto\b|\bfrom\b|VPA)\s+([A-Za-z0-9._-]+@[A-Za-z0-9]+)/i)?.[1];
+  const named = body
+    .match(
+      /(?:\bat\b|\bto\b|\bfrom\b|info:?)\s+([A-Za-z0-9][A-Za-z0-9&._ -]{2,29}?)(?=\s+(?:on|via|ref\w*|using|avl\w*|upi)\b|[.,:;]|$)/i
+    )?.[1]
+    ?.trim();
+  const merchant = upi ?? named ?? null;
 
-  const account = body.match(/(?:a\/c|acct?|card)\D{0,6}(\d{3,6})/i)?.[1] ?? null;
+  const account = body.match(/(?:a\/c|acct?|card)\s*(?:no\.?)?\s*[X*]*(\d{3,6})/i)?.[1] ?? null;
 
   return {
-    id: simpleHash(`${address}|${body}`), // same SMS => same id (use for dedupe)
+    id: simpleHash(`${address}|${body}`), // same SMS => same id
     type: isDebit ? 'debit' : 'credit',
     amount: parseFloat(amt[1].replace(/,/g, '')),
     merchant,

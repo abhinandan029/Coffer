@@ -21,7 +21,7 @@ function NavBar({ active,onChange, onAdd }) {
         alignSelf: "center",
         flexDirection: "row",
         alignItems: "center",
-        gap: 6,
+        gap: 1,
         padding: 6,
         paddingVertical: 3,
         borderRadius: 999,

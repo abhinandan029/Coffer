@@ -7,19 +7,25 @@ import { dayLabel, money } from "../utils/format";
 
 // Tapping outside does nothing, so an accidental tap can't dismiss it.
 // The Android back button counts as "Decide later".
-export default function ConfirmPayment({ expense, onResolve, onLater }) {
+export default function ConfirmPayment({ expense, onResolve, onLater, onEdit }) {
   return (
     <Modal visible={!!expense} transparent animationType="slide" onRequestClose={onLater}>
       <View className="flex-1 justify-end bg-black/70">
         {expense ? (
-          <Body key={expense.id} expense={expense} onResolve={onResolve} onLater={onLater} />
+          <Body
+            key={expense.id}
+            expense={expense}
+            onResolve={onResolve}
+            onLater={onLater}
+            onEdit={onEdit}
+          />
         ) : null}
       </View>
     </Modal>
   );
 }
 
-function Body({ expense, onResolve, onLater }) {
+function Body({ expense, onResolve, onLater, onEdit }) {
   const insets = useSafeAreaInsets();
   const [step, setStep] = useState("ask"); // "ask" | "category"
 
@@ -53,6 +59,18 @@ function Body({ expense, onResolve, onLater }) {
               <Text className="text-xs text-neutral-400" numberOfLines={1}>
                 {expense.note}
               </Text>
+            )}
+
+            {/* Opens the expense sheet to fix the amount, note or category */}
+            {!!onEdit && (
+              <Pressable
+                onPress={onEdit}
+                hitSlop={8}
+                className="mt-2 flex-row items-center gap-1 self-end rounded-xl bg-neutral-700 px-3 py-1.5"
+              >
+                <Ionicons name="pencil" size={14} color="#d4d4d4" />
+                <Text className="text-xs font-semibold text-neutral-200">Edit details</Text>
+              </Pressable>
             )}
           </View>
 

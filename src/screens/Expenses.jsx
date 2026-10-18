@@ -73,6 +73,7 @@ export default function Expenses({ onReviewPending }) {
   const spent = sum("CONFIRMED");
   const pending = sum("PENDING");
   const percent = Math.min((spent / budget) * 100, 100);
+  const over = spent > budget;
 
   const visible = expenses
     .filter((e) => (filter === "all" || e.category === filter) && inRange(e.createdAt, range))
@@ -152,12 +153,11 @@ export default function Expenses({ onReviewPending }) {
       <ExpenseSheet
         expense={selectedExpense}
         onClose={() => setSelectedId(null)}
-        onChange={(patch) =>
-          selectedExpense &&
-          updateExpense(
-            selectedExpense.id,
-            "status" in patch ? { ...patch, needsConfirm: false } : patch
-          )
+        onChange={(patch) =>{
+            if(!selectedExpense) return;
+            const next = "status" in patch ? { ...patch, needsConfirm : patch.status === "PENDING"} : patch;
+            updateExpense(selectedExpense.id, next);
+          } 
         }
         onDelete={() => {
           if (!selectedExpense) return;
@@ -182,12 +182,24 @@ export default function Expenses({ onReviewPending }) {
         )}
 
         <View className="mt-4 h-2 overflow-hidden rounded-full bg-neutral-700">
-          <View className="h-2 rounded-full bg-lime-300" style={{ width: `${percent}%` }} />
+          <View
+          className={`h-2 rounded-full ${over ? "bg-red-500" : "bg-lime-300"}`}
+          style={{ width: `${percent}%` }}
+          />
         </View>
-
-        <Text className="my-2 ml-auto text-sm text-neutral-200">
-          {money(Math.max(budget - spent, 0))} left
-        </Text>
+        
+        {over ? (
+          <View className="my-2 ml-auto flex-row items-center gap-1">
+            <Ionicons name="warning" size={14} color="#f87171" />
+            <Text className="text-sm font-semibold text-red-400">
+              Over budget by {money(Math.round((spent - budget) * 100) / 100)}
+            </Text>
+          </View>) : (
+            <Text className="my-2 ml-auto text-sm text-neutral-200">
+              {money(budget - spent)} left
+            </Text>
+          )
+        }
 
         <View className="ml-auto flex-row items-center gap-2">
           <Pressable
