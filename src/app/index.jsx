@@ -3,6 +3,7 @@ import { AppState, Linking, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ExpensesProvider, useExpenses } from "../contexts/ExpensesContext";
+import { LedgerProvider } from "../contexts/LedgerContext";
 
 import AddExpense from "../components/AddExpense";
 import ConfirmPayment from "../components/ConfirmPayment";
@@ -33,6 +34,7 @@ function Main() {
   const [confirmId, setConfirmId] = useState(null);
   // Set while the expense sheet is open on top of the confirm sheet (the "Edit details" button)
   const [editingId, setEditingId] = useState(null);
+
   const snoozed = useRef(new Set()); // "Decide later" ids, until the app restarts
   const expensesRef = useRef(expenses);
   expensesRef.current = expenses; // lets the listener below always see the latest list
@@ -161,8 +163,10 @@ function Main() {
 export default function Index() {
   return (
     <ExpensesProvider>
-      <SmsSync />
-      <Main />
+      <LedgerProvider>
+        <SmsSync />
+        <Main />
+      </LedgerProvider>
     </ExpensesProvider>
   );
 }
