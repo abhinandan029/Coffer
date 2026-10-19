@@ -10,7 +10,7 @@ const items = [
 
 const layout = LinearTransition.duration(250).easing(Easing.linear);
 
-function NavBar({ active,onChange, onAdd }) {
+function NavBar({ active, onChange, onAdd }) {
 
   return (
     <Animated.View
