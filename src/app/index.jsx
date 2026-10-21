@@ -9,6 +9,7 @@ import AddExpense from "../components/AddExpense";
 import ConfirmPayment from "../components/ConfirmPayment";
 import ExpenseSheet from "../components/ExpenseSheet";
 import Header from "../components/Header.jsx";
+import Menu from "../components/Menu";
 import NavBar from "../components/NavBar.jsx";
 import SmsSync from "../components/SmsSync";
 
@@ -25,6 +26,8 @@ function Main() {
   const Screen = screens[tab];
 
   const [adding , setAdding] = useState(false)
+
+  const [menu, setMenu] = useState(false)
 
   const { expenses, loaded, addExpense, updateExpense, deleteExpense } = useExpenses();
 
@@ -99,7 +102,12 @@ function Main() {
 
   return (
     <SafeAreaView className="flex-1 bg-black">
-      <Header />
+      <Header setMenu={() => setMenu(true)}/>
+
+      <Menu 
+        menu={menu} 
+        onClose={() => setMenu(false)}
+      />
 
       <View className="flex-1">
         <Screen
