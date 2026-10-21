@@ -1,7 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useEffect, useState } from "react";
 
-const KEY = "ledger-extras:v1";
+const KEY = "ledger-extras:v2";
 
 // Text notes and screenshots shown in a person's chat. They never affect the balance.
 export default function useLedgerExtras() {

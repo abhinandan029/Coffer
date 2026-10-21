@@ -1,7 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage"
 import { createContext, useContext, useEffect, useState } from "react"
 
-const KEY = "ledger:v1"
+const KEY = "ledger:v2"
 const SEED_DUMMY_DATA = true
  
 const ago = (hours) => new Date(Date.now() - hours * 3600000).toISOString()
@@ -46,7 +46,7 @@ export function LedgerProvider({ children }){
       (raw) => {
         const saved = raw ? JSON.parse(raw) : null
         if (saved && Array.isArray(saved.people) && Array.isArray(saved.entries)){
-          setData({ people : saved.people.filter(Boolean), entires : saved.entries.filter(Boolean)})
+          setData({ people : saved.people.filter(Boolean), entries : saved.entries.filter(Boolean)})
         } else if( SEED_DUMMY_DATA ) {
           setData({ people : SEED_PEOPLE, entries : SEED_ENTRIES })
         }
@@ -126,4 +126,3 @@ export function useLedger(){
   if (!ctx) throw new Error("useLedger must be inside <LedgerProvider> ")
   return ctx 
 }
-

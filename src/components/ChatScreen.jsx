@@ -71,7 +71,7 @@ export default function ChatScreen({ personId, onClose }) {
 
 function Body({ personId, onClose }) {
   const insets = useSafeAreaInsets();
-  const { people, entries, addEntry, updateEntry, deleteEntry } = useLedger();
+  const { people = [],  entries = [] , addEntry, updateEntry, deleteEntry } = useLedger();
   const { extras, loaded, addExtra, deleteExtra } = useLedgerExtras();
   const person = people.find((p) => p?.id === personId);
 

@@ -15,7 +15,7 @@ const FILTERS = [
 ];
 
 export default function Ledger() {
-  const { people, entries, loaded } = useLedger();
+  const { people = [], entries = [], loaded } = useLedger();
 
   const [filter, setFilter] = useState("all");
   const [chat, setChat] = useState(null); // id of the person whose thread is open
