@@ -1,12 +1,15 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useMemo, useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 
 import ChatScreen from "../components/ChatScreen";
+import ContactsList from "../components/ContactsList";
 
 import { dayHeading, initials, money, round2, signed } from "../constants/ledger";
 
 import { useLedger } from "../contexts/LedgerContext";
+
+import { fetchContacts } from "../utils/fetchContacts";
 
 const FILTERS = [
   { key: "all", label: "All" },
@@ -17,8 +20,28 @@ const FILTERS = [
 export default function Ledger() {
   const { people = [], entries = [], loaded } = useLedger();
 
+  const [contacts, setContacts] = useState([]);
+  const [fetching, setFetching] = useState(false)
+  const [select, setSelect] = useState(false)
+
   const [filter, setFilter] = useState("all");
   const [chat, setChat] = useState(null); // id of the person whose thread is open
+
+  const handleFetchContacts = async () => {
+    setSelect(true)
+    setFetching(true)
+    
+    const result = await fetchContacts()
+    setFetching(false)
+
+    if( result.success ){
+      setContacts(result.data)
+    }
+    else{
+      setSelect(false)
+      Alert.alert('Permission Denied', 'Please allow contact permission in phone setting to add a person.')
+    }
+  }
 
   // One row per person: balance from their entries, newest activity first
   const rows = useMemo(
@@ -59,7 +82,7 @@ export default function Ledger() {
     <>
       <ScrollView contentContainerClassName="p-4 pb-32 gap-5">
         {/* Net balance */}
-        <View className="rounded-3xl bg-neutral-900 p-5">
+        <View className="relative rounded-3xl bg-neutral-900 p-5">
           <Text className="text-sm text-neutral-400">Net balance</Text>
           <Text
             className={`mt-1 text-4xl font-bold ${
@@ -69,6 +92,12 @@ export default function Ledger() {
             {net > 0 ? "+" : net < 0 ? "-" : ""}
             {money(net)}
           </Text>
+
+          <Pressable
+          className="absolute right-5 top-5 bg-neutral-700 rounded-xl p-2"
+          onPress={handleFetchContacts}>
+            <Ionicons name="person-add" color="#ffffff" size={28} />
+          </Pressable>
 
           <View className="mt-4 flex-row gap-3">
             <View className="flex-1 rounded-2xl bg-neutral-800 p-3">
@@ -157,6 +186,16 @@ export default function Ledger() {
           </View>
         )}
       </ScrollView>
+
+      {
+        select && 
+        <ContactsList 
+          select={select}
+          fetching={fetching}
+          contacts={contacts}
+          onClose={() => setSelect(false)}
+        />
+      }
 
       <ChatScreen personId={chat} onClose={() => setChat(null)} />
     </>
