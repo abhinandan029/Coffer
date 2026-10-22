@@ -72,7 +72,7 @@ function Body({ onClose }){
 
       <View
       className="self-center mt-10">
-        <Text className="text-white">Coffer v.1.0.0</Text>
+        <Text className="text-white">Coffer v.1.0.0 Beta</Text>
       </View>
       
     </ScrollView>

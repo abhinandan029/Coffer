@@ -1,21 +1,14 @@
-// src/utils/parseBankSms.js
-// Turns a raw bank SMS into { id, type, amount, merchant, ... } or null.
-// Keep the debit/credit rules in sync with SmsFilter in SmsBackground.kt
-
 // Set true only to test with texts from a normal phone number
 const ALLOW_ANY_SENDER = false;
 
 const CURRENCY_AMOUNT = /(?:rs\.?|inr|₹)\s?([\d,]+(?:\.\d{1,2})?)/i;
-// Fallback for banks that write "debited by 500.0" with no currency symbol
-const VERB_AMOUNT =
-  /\b(?:debited|spent|paid|withdrawn|sent|deducted)\s+(?:by|for|of|with)?\s*([\d,]+(?:\.\d{1,2})?)/i;
-// "Dr." / "Cr." are used by Bank of Baroda and others
+
+const VERB_AMOUNT = /\b(?:debited|spent|paid|withdrawn|sent|deducted)\s+(?:by|for|of|with)?\s*([\d,]+(?:\.\d{1,2})?)/i;
+
 const DEBIT = /\b(debited|debit(?!\s+card)|dr|spent|withdrawn|paid|purchase|sent|deducted|txn of)\b/i;
 const CREDIT = /\b(credited|cr|received|deposited|refund(?:ed)?)\b/i;
 const IGNORE = /\b(otp|one time password|offer|loan|pre-?approved|cashback offer)\b/i;
 
-// Bank senders are alphanumeric IDs (VM-HDFCBK, VM-BOBSMS-S, HDFCBK ...).
-// A plain phone number has no letters, so it is not a bank.
 const isBankSender = (address) => /[A-Za-z]/.test(address);
 
 function simpleHash(str) {

@@ -34,7 +34,6 @@ export function registerAppPayment(amount, ttlMinutes = 15) {
   if (!SmsReader || !(Number(amount) > 0)) return;
   try {
     SmsReader.registerAppPayment(Number(amount), ttlMinutes * 60 * 1000);
-    console.log(`[SMS] ignoring bank SMS for ₹${amount} for ${ttlMinutes} min`);
   } catch (e) {
     console.warn('[SMS] registerAppPayment failed:', e);
   }
@@ -52,10 +51,8 @@ export function startSmsListener(onTransaction) {
     busy = true;
     try {
       const items = await SmsReader.drainQueue();
-      if (items.length) console.log(`[SMS] picked up ${items.length} queued message(s)`);
       items.forEach((m) => {
         const tx = parseBankSms({ body: m.body, address: m.address, date: m.date });
-        console.log('[SMS] queued message parsed:', tx ? 'YES' : 'NO (rejected by parser)');
         if (tx) onTransaction(tx);
       });
     } catch (e) {
