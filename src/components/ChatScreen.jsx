@@ -71,7 +71,10 @@ export default function ChatScreen({ personId, onClose }) {
 
 function Body({ personId, onClose }) {
   const insets = useSafeAreaInsets();
-  const { people = [],  entries = [] , addEntry, updateEntry, deleteEntry } = useLedger();
+
+  const [mode, setMode] = useState(null); // null | "delete"
+
+  const { people = [],  entries = [] , addEntry, updateEntry, deleteEntry, deletePerson } = useLedger();
   const { extras, loaded, addExtra, deleteExtra } = useLedgerExtras();
   const person = people.find((p) => p?.id === personId);
 
@@ -224,6 +227,13 @@ function Body({ personId, onClose }) {
           </Text>
           <Text className={`text-sm font-semibold ${summaryColor}`}>{summaryText}</Text>
         </View>
+        <Pressable
+        onPress={() => {
+            setMode("delete")
+          }
+        }>
+          <Ionicons name="trash-bin" color="#e61919" size={28} justify-end />
+        </Pressable>
       </View>
 
       {/* Thread: the only part that scrolls */}
@@ -410,6 +420,40 @@ function Body({ personId, onClose }) {
           }}
         />
       )}
+
+      {mode === "delete" && (
+        <View className="absolute bottom-0 left-0 right-0 top-0 items-center justify-center bg-black/70 px-6">
+          <View className="w-full items-center gap-3 rounded-3xl bg-neutral-900 p-6">
+              <View className="h-14 w-14 items-center justify-center rounded-full bg-red-500/15">
+                <Ionicons name="trash-outline" size={28} color="#f87171" />
+              </View>
+              <Text className="text-lg font-semibold text-white">Delete this Person?</Text>
+              <Text className="text-center text-sm text-neutral-400">
+                {person.name} will be removed. This can't be undone.
+              </Text>
+              <View className="mt-2 w-full flex-row gap-3">
+              <Pressable
+                onPress={() => setMode(null)}
+                className="flex-1 items-center rounded-2xl bg-neutral-800 py-3"
+              >
+                <Text className="font-semibold text-white">Cancel</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  deletePerson(person.id)
+                  setMode(null)
+                  onClose()
+                }}
+                className="flex-1 items-center rounded-2xl bg-red-500 py-3"
+              >
+                <Text className="font-semibold text-white">Delete</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      )}
+
+
     </View>
   );
 }

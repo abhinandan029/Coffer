@@ -47,8 +47,8 @@ export function LedgerProvider({ children }){
         const saved = raw ? JSON.parse(raw) : null
         if (saved && Array.isArray(saved.people) && Array.isArray(saved.entries)){
           setData({ people : saved.people.filter(Boolean), entries : saved.entries.filter(Boolean)})
-        } else if( SEED_DUMMY_DATA ) {
-          setData({ people : SEED_PEOPLE, entries : SEED_ENTRIES })
+        } else {
+          setData({ people : [], entries : [] })
         }
       }
     )
@@ -60,9 +60,9 @@ export function LedgerProvider({ children }){
     if (loaded) AsyncStorage.setItem(KEY, JSON.stringify(data)).catch(() => {})
   }, [data, loaded])
 
-  const addPerson = (name) =>{
-    const person = { id : nextId(), name : name.trim()}
-    setData((data) = ({ ...data, people : [...data.people, person]}))
+  const addPerson = (id, name) =>{
+    const person = { id : id, name : name.trim()}
+    setData((data) => ({ ...data, people : [...data.people, person]}))
     return person.id
   }
 

@@ -12,7 +12,9 @@ import {
   View
 } from "react-native";
 
-export default function ContactsList({ select, contacts, fetching, onClose }){
+import { initials } from "../constants/ledger";
+
+export default function ContactsList({ select, contacts, fetching, onClose, addPerson }){
   return (
     <Modal visible={select} transparent animationType="slide" onRequestClose={onClose}>
       <KeyboardAvoidingView
@@ -31,14 +33,14 @@ export default function ContactsList({ select, contacts, fetching, onClose }){
             <Text className="text-neutral-400 text-sm font-medium">Loading device contacts...</Text>
           </View>
         ) : contacts ? (
-          <Body contacts={contacts} onClose={onClose}/>
+          <Body contacts={contacts} onClose={onClose} addPerson={addPerson}/>
         ) : null}
       </KeyboardAvoidingView>
     </Modal>
   )
 }
 
-function Body({ contacts, onClose }) {
+function Body({ contacts, onClose, addPerson }) {
   const PAGE_SIZE = 20;
   const [searchQuery, setSearchQuery] = useState("");
   
@@ -107,12 +109,23 @@ function Body({ contacts, onClose }) {
         onEndReached={loadMoreContacts}
         onEndReachedThreshold={0.3}
         renderItem={({ item }) => (
-          <View className="flex bg-neutral-800 rounded-2xl px-4 py-3 gap-0.5">
-            <Text className="text-white text-lg font-semibold">{item.name}</Text>
-            <Text className="text-white/50 text-sm">
-              {item.numbers && item.numbers.length > 0 ? item.numbers[0] : 'No number'}
-            </Text>
-          </View>
+          <Pressable 
+          className="flex flex-row bg-neutral-800 rounded-2xl px-4 py-3 gap-2 items-center"
+          onPress={() => {
+            addPerson(item.id, item.name);
+            onClose()
+          }}>
+            <View className="h-12 w-12 items-center justify-center rounded-full bg-neutral-700">
+              <Text className="font-semibold text-white">{initials(item.name)}</Text>
+            </View>
+            <View>
+              <Text className="text-white text-lg font-semibold">{item.name}</Text>
+              <Text className="text-white/50 text-sm">
+                {item.numbers && item.numbers.length > 0 ? item.numbers[0] : 'No number'}
+              </Text>
+            </View>
+            
+          </Pressable>
         )}
         ListFooterComponent={
           visibleCount < filteredContacts.length ? (

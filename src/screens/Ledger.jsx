@@ -18,7 +18,7 @@ const FILTERS = [
 ];
 
 export default function Ledger() {
-  const { people = [], entries = [], loaded } = useLedger();
+  const { people = [], entries = [], loaded, addPerson } = useLedger();
 
   const [contacts, setContacts] = useState([]);
   const [fetching, setFetching] = useState(false)
@@ -142,7 +142,7 @@ export default function Ledger() {
 
         {/* People list */}
         {visible.length === 0 ? (
-          <Text className="mt-8 text-center text-neutral-500">Nothing here.</Text>
+          <Text className="mt-8 text-center text-neutral-500">Nothing here...</Text>
         ) : (
           <View className="overflow-hidden rounded-3xl bg-neutral-900">
             {visible.map((p, i) => {
@@ -193,6 +193,7 @@ export default function Ledger() {
           select={select}
           fetching={fetching}
           contacts={contacts}
+          addPerson={addPerson}
           onClose={() => setSelect(false)}
         />
       }
